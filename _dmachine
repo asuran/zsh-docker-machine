@@ -1,0 +1,14 @@
+#compdef dmachine
+#autoload
+
+local -a options arguments
+arguments=(
+  'start: Start or resume stopped/saved machine'
+  'stop: Completelly stop the machine. All runtime data will be removed.'
+  'pause: Stop the machine with persisting data to a drive.'
+  'restart: Completelly reload the machine.'
+  'switch: Pause all running machines and start selected machine'
+  'status: Print status of the machine'
+  'env: Configure the shell to work with specified machine.'
+)
+_describe 'values' options -- arguments
