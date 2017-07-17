@@ -23,7 +23,7 @@ function dmachine() {
           _start_via_vboxmanage $MACHINE_NAME
           ;;
         "Running")
-          echo 'Machine with name "'$MACHINE_NAME'" is already running'
+          echo '"'$MACHINE_NAME'" is already running'
           ;;
       esac
       ;;
