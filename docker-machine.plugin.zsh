@@ -2,100 +2,174 @@ declare -A DMACHINE_PROJECT_CONFIG
 
 source $(dirname $0)/functions.sh
 
-function dmachine() {
-  local ACTION_NAME=$1
-  local MACHINE_NAME=$2
+function _validate_command() {
+  local command_list=(start stop pause restart switch status env config)
 
+  for command in $command_list; do
+    if [ "$command" = "$1" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+function _validate_machine() {
+  local machine_list=($(dm ls | awk '(NR!=1) {print $1}'))
+
+  for machine in $machine_list; do
+    if [ "$machine" = "$1" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+function dmachine() {
   local CURRENT_DIR=$(pwd)
 
-  MACHINE_STATUS=$(dm ls | awk -v name=$MACHINE_NAME '($1 == name) {print $4}')
+  # set command
+  _validate_command $1
+  if [ $? -gt 0 ]; then
+    usage
+    exit 1
+  fi
+  local COMMAND=$1
+  shift
 
-  case $ACTION_NAME in
+  #set options
+  while [ $# -gt 0 ]; do
+    case $1 in
+      -o|--open-in-phpstorm)
+        PHPSTORM=1
+        shift
+        ;;
+      -w|--change-working-directory)
+        CHDIR=1
+        shift
+        ;;
+      -e|--with-env)
+        WITH_ENV=1
+        shift
+        ;;
+      -d|--with-dns)
+        WITH_DNS=1
+        shift
+        ;;
+      --debug)
+        DEBUG=1
+        shift
+        ;;
+      *)
+        _validate_machine $1
+
+        if [ $? -gt 0 ]; then
+          usage
+          exit 1
+        fi
+
+        local MACHINE=$1
+        shift
+        ;;
+    esac
+  done
+
+  local STATUS=$(dm ls | awk -v name=$MACHINE '($1 == name) {print $4}')
+
+  if [ "$DEBUG" = 1 ]; then
+    echo 'DUBUG:'
+    echo 'command: '$COMMAND
+    echo 'machine: '$MACHINE
+    echo 'status: '$STATUS
+  fi
+
+  case $COMMAND in
     "start")
-      case $MACHINE_STATUS in
+      case $STATUS in
         "Stopped")
-          _start_dm $MACHINE_NAME
+          _start_dm $MACHINE
           ;;
         "Paused")
-          _resume_dm $MACHINE_NAME
+          _resume_dm $MACHINE
           ;;
         "Saved")
-          _start_via_vboxmanage $MACHINE_NAME
+          _start_via_vboxmanage $MACHINE
           ;;
         "Running")
-          echo '"'$MACHINE_NAME'" is already running'
+          echo '"'$MACHINE'" is already running'
           ;;
       esac
       ;;
 
     "stop")
-      case $MACHINE_STATUS in
+      case $STATUS in
         "Stopped")
-          echo 'Machine with name "'$MACHINE_NAME'" is already stopped'
+          echo '"'$MACHINE'" is already stopped'
           ;;
           "Paused")
-          _stop_dm $MACHINE_NAME
+          _stop_dm $MACHINE
           ;;
         "Running")
-          _stop_dm $MACHINE_NAME
+          _stop_dm $MACHINE
           ;;
       esac
       ;;
 
     "pause")
-      case $MACHINE_STATUS in
+      case $STATUS in
         "Stopped")
-          echo 'Machine with name "'$MACHINE_NAME'" is not running'
+          echo '"'$MACHINE'" is not running'
           ;;
         "Paused")
-          echo 'Machine with name "'$MACHINE_NAME'" is already paused'
+          echo '"'$MACHINE'" is already paused'
           ;;
         "Running")
-           _save_state $MACHINE_NAME
+           _save_state $MACHINE
           ;;
       esac
       ;;
 
     "restart")
-      case $MACHINE_STATUS in
+      case $STATUS in
         "Stopped")
-          echo 'Machine with name "'$MACHINE_NAME'" is not running'
+          echo '"'$MACHINE'" is not running'
           ;;
         "Paused")
-          echo 'Machine with name "'$MACHINE_NAME'" is not running'
+          echo '"'$MACHINE'" is not running'
           ;;
         "Running")
-          echo 'Machine with name "'$MACHINE_NAME'" is not running'
-          _stop_dm $MACHINE_NAME
-          _start_dm $MACHINE_NAME
+          echo '"'$MACHINE'" is not running'
+          _stop_dm $MACHINE
+          _start_dm $MACHINE
           ;;
       esac
       ;;
 
     "switch")
       _pause_running
-      case $MACHINE_STATUS in
+      case $STATUS in
         "Stopped")
-          _start_dm $MACHINE_NAME
+          _start_dm $MACHINE
           ;;
         "Paused")
-          _resume_dm $MACHINE_NAME
+          _resume_dm $MACHINE
           ;;
         "Saved")
-          _start_via_vboxmanage $MACHINE_NAME
+          _start_via_vboxmanage $MACHINE
           ;;
         "Running")
-          echo 'Machine with name "'$MACHINE_NAME'" is already running'
+          echo '"'$MACHINE'" is already running'
           ;;
       esac
       ;;
 
     "status")
-      echo 'Machine with name "'$MACHINE_NAME'" is '$MACHINE_STATUS
+      echo '"'$MACHINE'" is '$STATUS
       ;;
 
     "env")
-      _env $MACHINE_NAME
+      _env $MACHINE
       ;;
     # "config")
     #     _load_config $CURRENT_DIR
