@@ -107,10 +107,7 @@ function dmachine() {
         "Stopped")
           echo '"'$MACHINE'" is already stopped'
           ;;
-          "Paused")
-          _stop_dm $MACHINE
-          ;;
-        "Running")
+        "Paused"|"Running")
           _stop_dm $MACHINE
           ;;
       esac
@@ -118,11 +115,8 @@ function dmachine() {
 
     "pause")
       case $STATUS in
-        "Stopped")
+        "Stopped"|"Paused")
           echo '"'$MACHINE'" is not running'
-          ;;
-        "Paused")
-          echo '"'$MACHINE'" is already paused'
           ;;
         "Running")
            _save_state $MACHINE
@@ -132,18 +126,15 @@ function dmachine() {
 
     "restart")
       case $STATUS in
-        "Stopped")
-          echo '"'$MACHINE'" is not running'
-          ;;
-        "Paused")
+        "Stopped"|"Paused")
           echo '"'$MACHINE'" is not running'
           ;;
         "Running")
-          echo '"'$MACHINE'" is not running'
           _stop_dm $MACHINE
-          _start_dm $MACHINE
           ;;
       esac
+
+      _start_dm $MACHINE
       ;;
 
     "switch")
