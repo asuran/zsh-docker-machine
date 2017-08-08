@@ -155,6 +155,8 @@ function dmachine() {
       esac
       ;;
 
+      _env $MACHINE
+
     "status")
       echo '"'$MACHINE'" is '$STATUS
       ;;
