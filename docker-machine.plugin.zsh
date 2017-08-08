@@ -153,9 +153,8 @@ function dmachine() {
           echo '"'$MACHINE'" is already running'
           ;;
       esac
-      ;;
-
       _env $MACHINE
+      ;;
 
     "status")
       echo '"'$MACHINE'" is '$STATUS
