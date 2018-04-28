@@ -8,7 +8,7 @@ arguments=(
   'pause: Stop the machine with persisting data to a drive.'
   'restart: Completelly reload the machine.'
   'switch: Pause all running machines and start selected machine'
-  'status: Print status of the machine'
+  'state: Print state of the machine'
   'env: Configure the shell to work with specified machine.'
 )
-_describe 'values' options -- arguments
+_describe 'command' arguments

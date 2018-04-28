@@ -1,52 +1,18 @@
-declare -A DMACHINE_PROJECT_CONFIG
-
 source $(dirname $0)/functions.sh
 
-function _validate_command() {
-  local command_list=(start stop pause restart switch status env config)
-
-  for command in $command_list; do
-    if [ "$command" = "$1" ]; then
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-function _validate_machine() {
-  local machine_list=($(dm ls | awk '(NR!=1) {print $1}'))
-
-  for machine in $machine_list; do
-    if [ "$machine" = "$1" ]; then
-      return 0
-    fi
-  done
-
-  return 1
-}
+# Flags
+WITH_ENV=0
+WITH_DNS=0
+DEBUG=0
 
 function dmachine() {
   local CURRENT_DIR=$(pwd)
 
-  # set command
-  _validate_command $1
-  if [ $? -gt 0 ]; then
-    usage
-    exit 1
-  fi
-  local COMMAND=$1
-  shift
-
-  #set options
+  # Parse arguments
   while [ $# -gt 0 ]; do
     case $1 in
-      -o|--open-in-phpstorm)
-        PHPSTORM=1
-        shift
-        ;;
-      -w|--change-working-directory)
-        CHDIR=1
+      start|stop|pause|restart|switch|state|env|config)
+        local COMMAND=$1
         shift
         ;;
       -e|--with-env)
@@ -62,31 +28,32 @@ function dmachine() {
         shift
         ;;
       *)
-        _validate_machine $1
-
+        local MACHINE=$1
+        shift
+        _validate_machine $MACHINE
         if [ $? -gt 0 ]; then
+          echo 'Machine "'$MACHINE'" not does not exists"'
           usage
           exit 1
         fi
-
-        local MACHINE=$1
-        shift
         ;;
     esac
   done
 
-  local STATUS=$(dm ls | awk -v name=$MACHINE '($1 == name) {print $4}')
+  local STATE=$(docker-machine ls --filter name=$MACHINE --format {{.State}})
 
   if [ "$DEBUG" = 1 ]; then
     echo 'DUBUG:'
-    echo 'command: '$COMMAND
-    echo 'machine: '$MACHINE
-    echo 'status: '$STATUS
+    echo 'Command: '$COMMAND
+    echo 'Machine name: '$MACHINE
+    echo 'Machine state: '$STATE
+    echo '--with-env='$WITH_ENV
+    echo '--with-dns='$WITH_DNS
   fi
 
   case $COMMAND in
     "start")
-      case $STATUS in
+      case $STATE in
         "Stopped")
           _start_dm $MACHINE
           ;;
@@ -100,10 +67,14 @@ function dmachine() {
           echo '"'$MACHINE'" is already running'
           ;;
       esac
+
+      if [ $WITH_ENV ]; then
+        _env $MACHINE
+      fi
       ;;
 
     "stop")
-      case $STATUS in
+      case $STATE in
         "Stopped")
           echo '"'$MACHINE'" is already stopped'
           ;;
@@ -114,7 +85,7 @@ function dmachine() {
       ;;
 
     "pause")
-      case $STATUS in
+      case $STATE in
         "Stopped"|"Paused")
           echo '"'$MACHINE'" is not running'
           ;;
@@ -125,7 +96,7 @@ function dmachine() {
       ;;
 
     "restart")
-      case $STATUS in
+      case $STATE in
         "Stopped"|"Paused")
           echo '"'$MACHINE'" is not running'
           ;;
@@ -135,11 +106,14 @@ function dmachine() {
       esac
 
       _start_dm $MACHINE
+      if [ $WITH_ENV ]; then
+        _env $MACHINE
+      fi
       ;;
 
     "switch")
       _pause_running
-      case $STATUS in
+      case $STATE in
         "Stopped")
           _start_dm $MACHINE
           ;;
@@ -156,20 +130,13 @@ function dmachine() {
       _env $MACHINE
       ;;
 
-    "status")
-      echo '"'$MACHINE'" is '$STATUS
+    "state")
+      echo '"'$MACHINE'" is '$STATE
       ;;
 
     "env")
       _env $MACHINE
       ;;
-    # "config")
-    #     _load_config $CURRENT_DIR
-    #     for k in "${(@k)DMACHINE_PROJECT_CONFIG}"
-    #     do
-    #       echo $k:${DMACHINE_PROJECT_CONFIG[$k]}
-    #     done
-    #   ;;
     *)
       usage
       ;;

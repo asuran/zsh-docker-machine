@@ -64,11 +64,26 @@ _pause_running() {
   done
 }
 
-# _load_config() {
-#   directory=$1
-#   declare -A DMACHINE_PROJECT_CONFIG
-#   while read name value
-#   do
-#       DMACHINE_PROJECT_CONFIG[$name]="$value"
-#   done < $directory/.dmachine
-# }
+function _validate_command() {
+  local command_list=(start stop pause restart switch status env config)
+
+  for command in $command_list; do
+    if [ "$command" = "$1" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+function _validate_machine() {
+  local machine_list=($(docker-machine ls -q))
+
+  for machine in $machine_list; do
+    if [ "$machine" = "$1" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
